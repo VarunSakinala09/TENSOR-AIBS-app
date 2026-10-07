@@ -1,0 +1,46 @@
+<html>
+<head>
+<title>Challenge 2011 Training Set A</title>
+</head>
+<body bgcolor="white">
+<!--#include virtual="/links-physiobank.html" -->
+
+</td>
+<td>
+<center><h1>Challenge 2011 Training Set A</h1></center>
+
+<p>
+This is a collection of 1000 twelve-lead ECGs, each 10 seconds long, to be used
+as a <em>training set</em> for the <a href=/challenge/2011/>PhysioNet/Computers
+in Cardiology Challenge 2011</a>.  The challenge entails determining which of
+the similar records in the <em>test sets</em> are acceptable for
+interpretation, and which are not.
+
+<p>
+<b>Reference classifications:</b> The final reference set of classifications
+for this training set is now available; records listed
+in <a href="RECORDS-acceptable">RECORDS-acceptable</a> are considered on the
+basis of currently available information to be acceptable for interpretation,
+and those listed in <a href="RECORDS-unacceptable">RECORDS-unacceptable</a> are
+not.
+
+<p>
+<b>File formats:</b> The records are provided in both CSV format (<tt>.txt</tt>
+files) and standard PhysioBank format (<tt>.hea</tt> and <tt>.dat</tt> files).
+The <tt>.hea</tt> files are short text files that specify the format of the
+binary <tt>.dat</tt> signal files.  The formats are those used elsewhere on
+PhysioNet; see the <a href="/faq.shtml#signals">FAQ</a> for details.  Note that
+the last line of each <tt>.hea</tt> file indicates the age and gender of the
+subject if known (unknown ages are recorded as 0, and ages over 89 are recorded
+as 90).  No other information is available about the subjects of these
+recordings.
+
+<p>
+Download individual files from the list below, or download the entire
+dataset as a tarball (<a href="../set-a.tar.gz">set-a.tar.gz</a>,
+about 103 MB).  See the <a href="/faq.shtml#tar-gz">FAQ</a> if you are
+not familiar with unpacking tarballs.
+
+<p>
+For additional information, see the <a href="/challenge/2011/">Challenge
+2011 home page</a>.
