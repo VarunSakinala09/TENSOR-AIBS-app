@@ -1,0 +1,4 @@
+method,accuracy,precision,sensitivity,specificity,f1,tn,fp,fn,tp
+all_lead_features,0.9248,0.8571,0.8,0.9612,0.8276,743,30,45,180
+statistics_only,0.9238,0.8531,0.8,0.9599,0.8257,742,31,45,180
+without_artifact_markers,0.9279,0.8525,0.8222,0.9586,0.8371,741,32,40,185

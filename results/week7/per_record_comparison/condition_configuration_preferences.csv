@@ -1,0 +1,13 @@
+baseline_group,preference,count
+Low,Both_Correct,323
+Medium,Both_Correct,320
+High,Both_Correct,218
+High,Both_Wrong,97
+Medium,Both_Wrong,12
+High,CWT_D_1_50,12
+Low,Both_Wrong,10
+High,Fixed_1_40,6
+Low,Fixed_1_40,0
+Medium,Fixed_1_40,0
+Low,CWT_D_1_50,0
+Medium,CWT_D_1_50,0

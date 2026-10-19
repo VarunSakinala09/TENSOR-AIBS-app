@@ -1,0 +1,6 @@
+,accuracy,accuracy,precision,precision,sensitivity,sensitivity,specificity,specificity,f1,f1
+,mean,std,mean,std,mean,std,mean,std,mean,std
+method,,,,,,,,,,
+all_lead_features,0.9247,0.0081,0.8422,0.0833,0.7766,0.0822,0.9607,0.0162,0.8058,0.0673
+statistics_only,0.9238,0.0145,0.8367,0.0871,0.7799,0.103,0.9597,0.0151,0.8035,0.0747
+without_artifact_markers,0.9278,0.0115,0.8371,0.0884,0.8047,0.0729,0.9585,0.0166,0.8182,0.0644

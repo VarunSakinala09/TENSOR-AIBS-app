@@ -1,0 +1,307 @@
+
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import SelectFromModel
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+)
+from sklearn.model_selection import StratifiedGroupKFold
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+PATH40 = ROOT / "results/week3/features_full_dataset.csv"
+PATH50 = ROOT / "results/week7/cwt_d/cwt_d_features.csv"
+PATH_LEAD = (
+    ROOT / "results/week8/lead_quality_features"
+    / "lead_quality_features.csv"
+)
+PATH_GROUPS = (
+    ROOT / "results/week4/group_aware_cv"
+    / "record_signal_groups.csv"
+)
+
+OUT = ROOT / "results/week8/feature_group_ablation"
+OUT.mkdir(parents=True, exist_ok=True)
+
+SEED = 42
+FOLDS = 5
+N_TREES = 100
+TOP_FEATURES = 100
+
+
+def load_data(path):
+    df = pd.read_csv(path, dtype={"record_id": str})
+    df["record_id"] = df["record_id"].astype(str).str.strip()
+
+    if df["record_id"].duplicated().any():
+        raise ValueError(f"Duplicate IDs in {path}")
+
+    if "label" not in df.columns:
+        raise ValueError(f"Missing label column in {path}")
+
+    ids = df["record_id"].to_numpy()
+    feature_cols = [
+        c for c in df.columns if c not in ["record_id", "label"]
+    ]
+
+    X = df[feature_cols].apply(pd.to_numeric, errors="coerce")
+    X = X.replace([np.inf, -np.inf], np.nan)
+
+    if X.isna().any().any():
+        raise ValueError(f"Invalid feature values in {path}")
+
+    labels = df["label"].astype(str).str.strip().str.lower()
+    mapping = {
+        "acceptable": 0,
+        "accept": 0,
+        "0": 0,
+        "unacceptable": 1,
+        "unaccept": 1,
+        "1": 1,
+    }
+    y = labels.map(mapping)
+
+    if y.isna().any():
+        raise ValueError(f"Unknown labels in {path}")
+
+    return (
+        pd.DataFrame(X.to_numpy(), index=ids, columns=feature_cols),
+        pd.Series(y.to_numpy(dtype=int), index=ids),
+    )
+
+
+def make_model(seed):
+    return RandomForestClassifier(
+        n_estimators=N_TREES,
+        random_state=seed,
+        n_jobs=-1,
+        class_weight="balanced",
+    )
+
+
+def metrics(y, pred):
+    tn, fp, fn, tp = confusion_matrix(
+        y, pred, labels=[0, 1]
+    ).ravel()
+
+    return {
+        "accuracy": accuracy_score(y, pred),
+        "precision": precision_score(
+            y, pred, zero_division=0
+        ),
+        "sensitivity": recall_score(
+            y, pred, pos_label=1, zero_division=0
+        ),
+        "specificity": tn / (tn + fp) if tn + fp else 0.0,
+        "f1": f1_score(y, pred, zero_division=0),
+        "tn": tn,
+        "fp": fp,
+        "fn": fn,
+        "tp": tp,
+    }
+
+
+def main():
+    print("\nFEATURE-GROUP ABLATION EXPERIMENT")
+    print("=" * 65)
+
+    X40, y40 = load_data(PATH40)
+    X50, y50 = load_data(PATH50)
+    Xlead, ylead = load_data(PATH_LEAD)
+
+    groups_df = pd.read_csv(
+        PATH_GROUPS,
+        dtype={"record_id": str, "signal_hash": str},
+    )
+    groups_df["record_id"] = (
+        groups_df["record_id"].astype(str).str.strip()
+    )
+
+    if groups_df["record_id"].duplicated().any():
+        raise ValueError("Duplicate IDs in group mapping")
+
+    groups_df = groups_df.set_index("record_id")
+
+    common = (
+        X40.index.intersection(X50.index)
+        .intersection(Xlead.index)
+        .intersection(groups_df.index)
+        .sort_values()
+    )
+
+    X40 = X40.loc[common]
+    X50 = X50.loc[common]
+    Xlead = Xlead.loc[common]
+    groups_df = groups_df.loc[common]
+
+    y = y40.loc[common].to_numpy(dtype=int)
+
+    if not np.array_equal(y, y50.loc[common].to_numpy(dtype=int)):
+        raise ValueError("Labels differ between CWT datasets")
+
+    if not np.array_equal(y, ylead.loc[common].to_numpy(dtype=int)):
+        raise ValueError("Labels differ in lead-quality dataset")
+
+    if not np.array_equal(
+        y, groups_df["label"].astype(str).str.strip().str.lower().map({
+            "acceptable": 0, "accept": 0, "0": 0,
+            "unacceptable": 1, "unaccept": 1, "1": 1
+        }).to_numpy(dtype=int)
+    ):
+        raise ValueError("Labels differ in group mapping")
+
+    groups = groups_df["signal_hash"].to_numpy(dtype=str)
+
+    A = X40.to_numpy(dtype=np.float32)
+    B = X50.to_numpy(dtype=np.float32)
+    L = Xlead.to_numpy(dtype=np.float32)
+
+    C40 = np.concatenate([A, L], axis=1)
+    C50 = np.concatenate([B, L], axis=1)
+
+    datasets = {
+        "fixed40_only": A,
+        "fixed50_only": B,
+        "lead_quality_only": L,
+        "combined40_all": C40,
+        "combined50_all": C50,
+    }
+
+    print("Records:", len(y))
+    print("Unique signal groups:", len(np.unique(groups)))
+    print("Feature counts:")
+    for name, X in datasets.items():
+        print(f"  {name}: {X.shape[1]}")
+
+    cv = StratifiedGroupKFold(
+        n_splits=FOLDS,
+        shuffle=True,
+        random_state=SEED,
+    )
+
+    fold_results = []
+    oof_results = []
+
+    for fold, (train_idx, test_idx) in enumerate(
+        cv.split(L, y, groups), start=1
+    ):
+        print(f"\nFold {fold}/{FOLDS}")
+
+        if set(groups[train_idx]).intersection(groups[test_idx]):
+            raise RuntimeError("Signal-group leakage detected")
+
+        y_train = y[train_idx]
+        y_test = y[test_idx]
+
+        predictions = {}
+
+        # Evaluate each complete feature group.
+        for name, X in datasets.items():
+            model = make_model(SEED + fold)
+            model.fit(X[train_idx], y_train)
+            predictions[name] = model.predict(
+                X[test_idx]
+            ).astype(int)
+
+        # Select top features using training data only.
+        # This selector is fitted separately within each fold.
+        selector_model = make_model(SEED + fold)
+        selector_model.fit(C40[train_idx], y_train)
+
+        importances = selector_model.feature_importances_
+        number_to_keep = min(TOP_FEATURES, C40.shape[1])
+
+        top_indices = np.argsort(importances)[-number_to_keep:]
+
+        selected_train = C40[train_idx][:, top_indices]
+        selected_test = C40[test_idx][:, top_indices]
+
+        selected_model = make_model(SEED + fold)
+        selected_model.fit(selected_train, y_train)
+
+        predictions["combined40_selected"] = (
+            selected_model.predict(selected_test).astype(int)
+        )
+
+        for name, pred in predictions.items():
+            score = metrics(y_test, pred)
+
+            fold_results.append({
+                "fold": fold,
+                "method": name,
+                "selected_feature_count": (
+                    len(top_indices)
+                    if name == "combined40_selected"
+                    else datasets.get(name, np.empty((0, 0))).shape[1]
+                ),
+                **score,
+            })
+
+            for local_i, global_i in enumerate(test_idx):
+                oof_results.append({
+                    "record_id": common[global_i],
+                    "signal_hash": groups[global_i],
+                    "fold": fold,
+                    "method": name,
+                    "true_label": int(y_test[local_i]),
+                    "prediction": int(pred[local_i]),
+                })
+
+            print(
+                f"  {name}: F1={score['f1']:.4f}, "
+                f"Sensitivity={score['sensitivity']:.4f}, "
+                f"Specificity={score['specificity']:.4f}"
+            )
+
+    folds_df = pd.DataFrame(fold_results)
+    oof_df = pd.DataFrame(oof_results)
+
+    folds_df.to_csv(OUT / "fold_metrics.csv", index=False)
+    oof_df.to_csv(OUT / "out_of_fold_predictions.csv", index=False)
+
+    summary = (
+        folds_df.groupby("method")[
+            ["accuracy", "precision", "sensitivity", "specificity", "f1"]
+        ]
+        .agg(["mean", "std"])
+        .round(4)
+    )
+    summary.to_csv(OUT / "fold_summary.csv")
+
+    pooled_rows = []
+
+    for method, part in oof_df.groupby("method"):
+        pooled_rows.append({
+            "method": method,
+            **metrics(
+                part["true_label"].to_numpy(),
+                part["prediction"].to_numpy(),
+            ),
+        })
+
+    pooled = pd.DataFrame(pooled_rows).round(4)
+    pooled.to_csv(OUT / "pooled_oof_metrics.csv", index=False)
+
+    print("\nFOLD MEAN AND STANDARD DEVIATION")
+    print("=" * 75)
+    print(summary.to_string())
+
+    print("\nPOOLED OUT-OF-FOLD METRICS")
+    print("=" * 75)
+    print(pooled.to_string(index=False))
+
+    print("\nSaved results to:")
+    print(OUT)
+
+
+if __name__ == "__main__":
+    main()

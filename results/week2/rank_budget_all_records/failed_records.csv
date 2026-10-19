@@ -1,0 +1,4 @@
+record_id,label,error_message
+2930238,Unacceptable,"ValueError('cannot reshape array of size 0 into shape (0,newaxis)')"
+2966470,Unacceptable,"ValueError('cannot reshape array of size 0 into shape (0,newaxis)')"
+2984959,Unacceptable,"ValueError('cannot reshape array of size 0 into shape (0,newaxis)')"

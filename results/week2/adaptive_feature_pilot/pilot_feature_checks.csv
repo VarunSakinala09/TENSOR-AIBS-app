@@ -1,0 +1,4 @@
+record_id,label,fixed_rank,adaptive_rank,fixed_core_shape,adaptive_core_shape,fixed_feature_count,adaptive_feature_count,finite_features
+1002867,Acceptable,"(50, 20, 6)","(49, 17, 10)","(50, 20, 6)","(49, 17, 10)",21600,21600,True
+1005639,Acceptable,"(50, 20, 6)","(44, 23, 9)","(50, 20, 6)","(44, 23, 9)",21600,21600,True
+1007823,Acceptable,"(50, 20, 6)","(49, 17, 10)","(50, 20, 6)","(49, 17, 10)",21600,21600,True

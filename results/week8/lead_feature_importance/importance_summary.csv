@@ -1,0 +1,13 @@
+feature,mean_importance,fold_std,mean_permutation_std,positive_folds
+mean_lead_std,0.08589,0.07972,0.02218,5
+mean_lead_range,0.06192,0.06816,0.01626,4
+min_unique_values,0.03299,0.03088,0.01912,4
+min_lead_range,0.02487,0.03509,0.01526,4
+min_lead_std,0.01606,0.03197,0.01465,3
+max_zero_fraction,0.00622,0.00524,0.01029,5
+median_lead_range,0.00621,0.01751,0.01103,3
+median_lead_std,0.00325,0.02793,0.01393,2
+leads_with_zero_count,0.00309,0.00543,0.00411,4
+lead_count,0.0,0.0,0.0,0
+total_nonfinite_samples,0.0,0.0,0.0,0
+median_unique_values,-0.00143,0.01808,0.01125,3

@@ -1,0 +1,5 @@
+prediction_group,records,unique_signal_groups
+False Negative,120,120
+False Positive,8,8
+True Negative,765,765
+True Positive,105,46

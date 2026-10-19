@@ -1,0 +1,7 @@
+record_id,label,baseline_prediction,highpass_prediction,adaptive_prediction,mean_baseline_variation,baseline_correct,highpass_correct,adaptive_correct,baseline_vs_adaptive
+1003574,Unacceptable,Acceptable,Acceptable,Unacceptable,1.9100583227623664,False,False,True,"Baseline wrong, adaptive correct"
+1377360,Unacceptable,Acceptable,Unacceptable,Unacceptable,12.682072870906334,False,True,True,"Baseline wrong, adaptive correct"
+1756508,Unacceptable,Acceptable,Unacceptable,Unacceptable,6.414401429449081,False,True,True,"Baseline wrong, adaptive correct"
+2378950,Unacceptable,Acceptable,Unacceptable,Unacceptable,2.90983321852879,False,True,True,"Baseline wrong, adaptive correct"
+2526844,Unacceptable,Acceptable,Acceptable,Unacceptable,0.8912483649327746,False,False,True,"Baseline wrong, adaptive correct"
+2990643,Unacceptable,Acceptable,Unacceptable,Unacceptable,8.178514128946787,False,True,True,"Baseline wrong, adaptive correct"

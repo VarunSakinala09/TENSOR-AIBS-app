@@ -1,0 +1,4 @@
+method,accuracy,precision,sensitivity,specificity,f1,tn,fp,fn,tp
+fixed_core_plus_rank_metadata,0.8794,0.9113,0.509,0.9858,0.6532,762,11,109,113
+fixed_rank_core_only,0.8804,0.9187,0.509,0.9871,0.6551,763,10,109,113
+lead_quality_only,0.9276,0.8606,0.8063,0.9625,0.8326,744,29,43,179

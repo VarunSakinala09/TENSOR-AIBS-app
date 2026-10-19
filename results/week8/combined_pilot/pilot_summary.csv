@@ -1,0 +1,3 @@
+record_id,selected_cwt,tensor_shape,fixed_rank,selected_rank,fixed_error,selected_error,fixed_representation_size,selected_representation_size,improved_both,feature_count,rank_search_seconds
+1002867,CWT_1_40_Hz,"(5000, 100, 12)","(50, 20, 6)","(49, 19, 8)",0.14684104919433594,0.1308317631483078,258072,254444,True,6003,20.497979600011604
+1002603,CWT_1_50_Hz,"(5000, 100, 12)","(50, 20, 6)","(48, 22, 6)",0.030588440597057343,0.02497132308781147,258072,248608,True,6003,51.62471740000183

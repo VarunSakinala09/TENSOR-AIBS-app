@@ -1,0 +1,6 @@
+true_label,adaptive_prediction,flat_or_degenerate,records
+0,0,False,765
+0,1,False,8
+1,0,False,120
+1,1,False,39
+1,1,True,66

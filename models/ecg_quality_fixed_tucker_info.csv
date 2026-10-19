@@ -1,0 +1,2 @@
+model_file,feature_count,training_records,acceptable_records,unacceptable_records,feature_method
+C:\Users\varun\Desktop\Adapative ECG quality\Adaptive-ECG-Quality\models\ecg_quality_fixed_tucker.joblib,6000,998,773,225,"fixed CWT 1-40 Hz, Tucker rank (50, 20, 6)"

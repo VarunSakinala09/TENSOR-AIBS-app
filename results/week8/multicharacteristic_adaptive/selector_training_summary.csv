@@ -1,0 +1,6 @@
+outer_fold,informative_training_records,choose40_training_examples,choose50_training_examples,selector_used,fallback
+1,11,8,3,True,
+2,23,11,12,True,
+3,18,12,6,True,
+4,17,11,6,True,
+5,12,7,5,True,

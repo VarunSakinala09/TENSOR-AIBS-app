@@ -1,3 +1,4 @@
+
 import os
 import numpy as np
 import wfdb
@@ -37,7 +38,6 @@ print("----------------")
 print("Original ECG shape:", signal.shape)
 print("Sampling frequency:", fs)
 print("Number of leads:", len(lead_names))
-print("Leads:", lead_names)
 
 
 # --------------------------------------------------
@@ -56,9 +56,7 @@ frequencies = np.linspace(
 
 central_frequency = pywt.central_frequency("morl")
 
-scales = (
-    central_frequency * fs / frequencies
-)
+scales = central_frequency * fs / frequencies
 
 
 # --------------------------------------------------
@@ -69,52 +67,43 @@ scalograms = []
 
 for lead_index, lead_name in enumerate(lead_names):
 
-    lead_signal = signal[:, lead_index]
-
     coefficients, actual_frequencies = pywt.cwt(
-        lead_signal,
+        signal[:, lead_index],
         scales,
         "morl",
         sampling_period=1 / fs
     )
 
-    power = np.abs(coefficients)
+    scalograms.append(np.abs(coefficients))
 
-    scalograms.append(power)
-
-    print(
-        f"{lead_name}:",
-        power.shape
-    )
-
-
-scalograms = np.array(scalograms)
+scalograms = np.asarray(scalograms)
 
 
 # --------------------------------------------------
 # 5. CREATE 3D TENSOR
 # --------------------------------------------------
 
-tensor = np.transpose(
-    scalograms,
-    (2, 1, 0)
+tensor = np.transpose(scalograms, (2, 1, 0))
+
+time_dimension, frequency_dimension, lead_dimension = (
+    tensor.shape
 )
 
 print("\n3D TENSOR")
 print("---------")
 print("Tensor shape:", tensor.shape)
+print("Time:", time_dimension)
+print("Frequency:", frequency_dimension)
+print("Leads:", lead_dimension)
+print("Original elements:", tensor.size)
 
 
 # --------------------------------------------------
-# 6. ENERGY RETENTION
+# 6. MODE-WISE ENERGY-BASED RANK SELECTION
 # --------------------------------------------------
 
 energy_threshold = 0.95
 
-
-# --------------------------------------------------
-# 7. FIND RANK FROM MODE-WISE SVD
-# --------------------------------------------------
 
 def find_rank_from_energy(matrix, threshold):
 
@@ -124,83 +113,51 @@ def find_rank_from_energy(matrix, threshold):
     )
 
     energy = singular_values ** 2
+    total_energy = energy.sum()
 
-    cumulative_energy = np.cumsum(energy)
+    if total_energy == 0:
+        return 1, 1.0
 
-    total_energy = cumulative_energy[-1]
-
-    retained_energy = (
-        cumulative_energy / total_energy
-    )
+    cumulative_energy = np.cumsum(energy) / total_energy
 
     rank = np.searchsorted(
-        retained_energy,
+        cumulative_energy,
         threshold
     ) + 1
 
-    return rank, retained_energy
+    rank = min(rank, len(singular_values))
+
+    return int(rank), float(cumulative_energy[rank - 1])
 
 
-# --------------------------------------------------
-# 8. MODE 1: TIME
-# --------------------------------------------------
+# Mode 1: time
+time_mode = tensor.reshape(time_dimension, -1)
 
-time_mode = tensor.reshape(
-    tensor.shape[0],
-    -1
-)
-
-time_rank, time_energy = find_rank_from_energy(
+time_rank, time_retained = find_rank_from_energy(
     time_mode,
     energy_threshold
 )
 
 
-# --------------------------------------------------
-# 9. MODE 2: FREQUENCY
-# --------------------------------------------------
+# Mode 2: frequency
+frequency_mode = np.moveaxis(tensor, 1, 0)
+frequency_mode = frequency_mode.reshape(frequency_dimension, -1)
 
-frequency_mode = np.moveaxis(
-    tensor,
-    1,
-    0
-)
-
-frequency_mode = frequency_mode.reshape(
-    tensor.shape[1],
-    -1
-)
-
-frequency_rank, frequency_energy = find_rank_from_energy(
+frequency_rank, frequency_retained = find_rank_from_energy(
     frequency_mode,
     energy_threshold
 )
 
 
-# --------------------------------------------------
-# 10. MODE 3: LEADS
-# --------------------------------------------------
+# Mode 3: leads
+lead_mode = np.moveaxis(tensor, 2, 0)
+lead_mode = lead_mode.reshape(lead_dimension, -1)
 
-lead_mode = np.moveaxis(
-    tensor,
-    2,
-    0
-)
-
-lead_mode = lead_mode.reshape(
-    tensor.shape[2],
-    -1
-)
-
-lead_rank, lead_energy = find_rank_from_energy(
+lead_rank, lead_retained = find_rank_from_energy(
     lead_mode,
     energy_threshold
 )
 
-
-# --------------------------------------------------
-# 11. AUTOMATICALLY SELECTED RANK
-# --------------------------------------------------
 
 rank = [
     time_rank,
@@ -211,11 +168,14 @@ rank = [
 print("\nADAPTIVE RANK SELECTION")
 print("-----------------------")
 print("Energy threshold:", energy_threshold)
-print("Automatically selected rank:", rank)
+print("Selected rank:", rank)
+print("Time-mode retained energy:", time_retained)
+print("Frequency-mode retained energy:", frequency_retained)
+print("Lead-mode retained energy:", lead_retained)
 
 
 # --------------------------------------------------
-# 12. TUCKER DECOMPOSITION
+# 7. TUCKER DECOMPOSITION
 # --------------------------------------------------
 
 core, factors = tucker(
@@ -226,70 +186,59 @@ core, factors = tucker(
 
 
 # --------------------------------------------------
-# 13. TUCKER RESULTS
-# --------------------------------------------------
-
-print("\nTUCKER RESULTS")
-print("--------------")
-
-print(
-    "Core tensor shape:",
-    core.shape
-)
-
-print(
-    "Number of factor matrices:",
-    len(factors)
-)
-
-for factor_index, factor in enumerate(
-    factors,
-    start=1
-):
-
-    print(
-        f"Factor matrix {factor_index} shape:",
-        factor.shape
-    )
-
-
-# --------------------------------------------------
-# 14. RECONSTRUCT TENSOR
+# 8. RECONSTRUCT TENSOR
 # --------------------------------------------------
 
 reconstructed_tensor = tl.tucker_to_tensor(
     (core, factors)
 )
 
-print("\nRECONSTRUCTION")
-print("--------------")
-
-print(
-    "Reconstructed tensor shape:",
-    reconstructed_tensor.shape
-)
-
-
-# --------------------------------------------------
-# 15. RECONSTRUCTION ERROR
-# --------------------------------------------------
-
-difference = (
-    tensor - reconstructed_tensor
-)
+difference = tensor - reconstructed_tensor
 
 reconstruction_error = (
     np.linalg.norm(difference)
-    /
-    np.linalg.norm(tensor)
+    / max(np.linalg.norm(tensor), 1e-12)
 )
 
-print(
-    "Reconstruction error:",
-    reconstruction_error
+
+# --------------------------------------------------
+# 9. REPRESENTATION SIZE AND COMPRESSION
+# --------------------------------------------------
+
+core_size = core.size
+
+factor_sizes = [
+    factor.size for factor in factors
+]
+
+representation_size = core_size + sum(factor_sizes)
+
+compression_ratio = (
+    tensor.size / representation_size
+    if representation_size else 0
 )
 
+complexity = representation_size / tensor.size
+
+
+# --------------------------------------------------
+# 10. RESULTS
+# --------------------------------------------------
+
+print("\nTUCKER RESULTS")
+print("--------------")
+print("Core shape:", core.shape)
+
+for index, factor in enumerate(factors, start=1):
+    print(f"Factor {index} shape:", factor.shape)
+
+print("Reconstructed shape:", reconstructed_tensor.shape)
+print("Relative reconstruction error:", reconstruction_error)
+print("Representation elements:", representation_size)
+print("Compression ratio:", compression_ratio)
+print("Normalized representation size:", complexity)
+
 print(
-    "Retained information estimate:",
-    1 - reconstruction_error
+    "\nNote: Mode-wise 95% energy retention does not guarantee "
+    "95% total Tucker reconstruction energy."
 )
